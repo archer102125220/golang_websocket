@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,8 @@ import (
 )
 
 type Broadcaster struct {
-	UsersChannel chan interface{}
+	UsersChannel     chan interface{}
+	SendStampChannel chan *Customer
 }
 
 type Connector struct {
@@ -33,7 +35,6 @@ type ReqBody struct {
 type RespBody struct {
 	Event string      `form:"event"`
 	Data  interface{} `form:"data"`
-
 }
 
 var upgrade = websocket.Upgrader{
@@ -47,12 +48,11 @@ var server = &Server{
 }
 
 var broadcaster = &Broadcaster{
-	UsersChannel: make(chan interface{}, 0),
+	UsersChannel:     make(chan interface{}, 0),
+	SendStampChannel: make(chan *Customer, 0),
 }
 
-
-
-type Player struct{
+type Customer struct {
 	Guid string
 }
 
@@ -95,37 +95,29 @@ func main() {
 				break
 			}
 
+			event := body.Event
 
-			player :=&Player{}
-
-			mapstructure.Decode(body.Data,player)
-
-			fmt.Println(player)
-
-
-			broadcaster.UsersChannel <- data
+			switch event {
+			case "SEND_STAMP_TO_CUSTOMER_NOTIFY":
+				customer := &Customer{}
+				mapstructure.Decode(body.Data, customer)
+				broadcaster.SendStampChannel <- customer
+			}
 
 		}
 	})
-	r.Run(":3010")
+	r.Run(":3000")
 }
 
 func (b *Broadcaster) Start() {
 
 	for {
 		select {
-		case resp := <-b.UsersChannel:
+		case customer := <-b.SendStampChannel:
 			for _, user := range server.Connectors {
-				fmt.Println(resp,user)
-				// body := &RespBody{}
-
-				// if err := json.Unmarshal(resp, body); err != nil {
-				// 	log.Panicln("非法格式:", err)
-				// }
-				
-
-
-				// user.WsConn.WriteMessage(1, []byte(cv))
+				if customer.Guid == user.Cid {
+					user.WsConn.WriteMessage(1, []byte("GOT IT"))
+				}
 			}
 		}
 
