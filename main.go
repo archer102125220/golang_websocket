@@ -13,8 +13,8 @@ import (
 )
 
 type Broadcaster struct {
-	UsersChannel     chan interface{}
-	SendStampChannel chan *Customer
+	UsersChannel       chan interface{}
+	StampNotifyChannel chan *StampNotify
 }
 
 type Connector struct {
@@ -33,8 +33,8 @@ type ReqBody struct {
 }
 
 type RespBody struct {
-	Event string      `form:"event"`
-	Data  interface{} `form:"data"`
+	Event string      `form:"event" json:"event"`
+	Data  interface{} `form:"data" json:"data"`
 }
 
 var upgrade = websocket.Upgrader{
@@ -48,12 +48,17 @@ var server = &Server{
 }
 
 var broadcaster = &Broadcaster{
-	UsersChannel:     make(chan interface{}, 0),
-	SendStampChannel: make(chan *Customer, 0),
+	UsersChannel:       make(chan interface{}, 0),
+	StampNotifyChannel: make(chan *StampNotify, 0),
 }
 
-type Customer struct {
-	Guid string
+type StampNotify struct {
+	Guid          string `mapstructure:"guid" json:"guid"`
+	PrizeID       int    `mapstructure:"prize_id" json:"prize_id"`
+	ItemName      string `mapstructure:"item_name" json:"item_name"`
+	ExchangeNum   int    `mapstructure:"exchange_num" json:"exchange_num"`
+	SpendStampNum int    `mapstructure:"spend_stamp_num" json:"spend_stamp_num"`
+	RemainStampNum int    `mapstructure:"remain_stamp_num" json:"remain_stamp_num"`
 }
 
 func main() {
@@ -86,7 +91,8 @@ func main() {
 			_, data, err := ws.ReadMessage()
 			body := &ReqBody{}
 			if err := json.Unmarshal(data, body); err != nil {
-				log.Panicln("非法格式:", err)
+				fmt.Println(err)
+				break
 			}
 
 			if err != nil {
@@ -99,9 +105,9 @@ func main() {
 
 			switch event {
 			case "SEND_STAMP_TO_CUSTOMER_NOTIFY":
-				customer := &Customer{}
+				customer := &StampNotify{}
 				mapstructure.Decode(body.Data, customer)
-				broadcaster.SendStampChannel <- customer
+				broadcaster.StampNotifyChannel <- customer
 			}
 
 		}
@@ -113,10 +119,19 @@ func (b *Broadcaster) Start() {
 
 	for {
 		select {
-		case customer := <-b.SendStampChannel:
+		case notify := <-b.StampNotifyChannel:
 			for _, user := range server.Connectors {
-				if customer.Guid == user.Cid {
-					user.WsConn.WriteMessage(1, []byte("GOT IT"))
+				if notify.Guid == user.Cid {
+					res := RespBody{
+						Event: "SEND_STAMP_TO_CUSTOMER_NOTIFY",
+						Data:  notify,
+					}
+					json, err := json.Marshal(res)
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+					user.WsConn.WriteMessage(1, []byte(json))
 				}
 			}
 		}
