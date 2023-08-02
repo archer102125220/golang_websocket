@@ -56,6 +56,8 @@ var broadcaster = &Broadcaster{
 
 type StampNotify struct {
 	Guid           string `mapstructure:"guid" json:"guid"`
+	Uid            string `mapstructure:"uid" json:"uid"`
+	Desc           string `mapstructure:"desc" json:"desc"`
 	PrizeID        int    `mapstructure:"prize_id" json:"prize_id"`
 	ItemName       string `mapstructure:"item_name" json:"item_name"`
 	ExchangeNum    int    `mapstructure:"exchange_num" json:"exchange_num"`
@@ -124,12 +126,11 @@ func main() {
 
 		}
 	})
-	
 
 	err := r.RunTLS(":3000", "/etc/letsencrypt/live/dev-zack2.jiapin.online/cert.pem", "/etc/letsencrypt/live/dev-zack2.jiapin.online/privkey.pem")
-   	if err != nil {
-        	fmt.Println("Error starting server:", err)
-    	}
+	if err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 
 }
 
