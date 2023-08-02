@@ -13,8 +13,9 @@ import (
 )
 
 type Broadcaster struct {
-	UsersChannel       chan interface{}
-	StampNotifyChannel chan *StampNotify
+	UsersChannel              chan interface{}
+	StampNotifyChannel        chan *StampNotify
+	StampSuccessNotifyChannel chan *StampNotifySuccess
 }
 
 type Connector struct {
@@ -48,17 +49,24 @@ var server = &Server{
 }
 
 var broadcaster = &Broadcaster{
-	UsersChannel:       make(chan interface{}, 0),
-	StampNotifyChannel: make(chan *StampNotify, 0),
+	UsersChannel:              make(chan interface{}, 0),
+	StampNotifyChannel:        make(chan *StampNotify, 0),
+	StampSuccessNotifyChannel: make(chan *StampNotifySuccess, 0),
 }
 
 type StampNotify struct {
-	Guid          string `mapstructure:"guid" json:"guid"`
-	PrizeID       int    `mapstructure:"prize_id" json:"prize_id"`
-	ItemName      string `mapstructure:"item_name" json:"item_name"`
-	ExchangeNum   int    `mapstructure:"exchange_num" json:"exchange_num"`
-	SpendStampNum int    `mapstructure:"spend_stamp_num" json:"spend_stamp_num"`
+	Guid           string `mapstructure:"guid" json:"guid"`
+	PrizeID        int    `mapstructure:"prize_id" json:"prize_id"`
+	ItemName       string `mapstructure:"item_name" json:"item_name"`
+	ExchangeNum    int    `mapstructure:"exchange_num" json:"exchange_num"`
+	SpendStampNum  int    `mapstructure:"spend_stamp_num" json:"spend_stamp_num"`
 	RemainStampNum int    `mapstructure:"remain_stamp_num" json:"remain_stamp_num"`
+}
+
+type StampNotifySuccess struct {
+	Uid     string `mapstructure:"uid" json:"uid"`
+	Code    string `mapstructure:"code" json:"code"`
+	Message string `mapstructure:"message" json:"message"`
 }
 
 func main() {
@@ -108,6 +116,10 @@ func main() {
 				customer := &StampNotify{}
 				mapstructure.Decode(body.Data, customer)
 				broadcaster.StampNotifyChannel <- customer
+			case "SEND_STAMP_SUCCESS_NOTIFY":
+				success := &StampNotifySuccess{}
+				mapstructure.Decode(body.Data, success)
+				broadcaster.StampSuccessNotifyChannel <- success
 			}
 
 		}
@@ -122,6 +134,7 @@ func (b *Broadcaster) Start() {
 		case notify := <-b.StampNotifyChannel:
 			for _, user := range server.Connectors {
 				if notify.Guid == user.Cid {
+
 					res := RespBody{
 						Event: "SEND_STAMP_TO_CUSTOMER_NOTIFY",
 						Data:  notify,
@@ -134,6 +147,24 @@ func (b *Broadcaster) Start() {
 					user.WsConn.WriteMessage(1, []byte(json))
 				}
 			}
+		case notify := <-b.StampSuccessNotifyChannel:
+
+			for _, user := range server.Connectors {
+				if notify.Uid == user.Cid {
+
+					res := RespBody{
+						Event: "SEND_STAMP_SUCCESS_NOTIFY",
+						Data:  notify,
+					}
+					json, err := json.Marshal(res)
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+					user.WsConn.WriteMessage(1, []byte(json))
+				}
+			}
+
 		}
 
 	}
