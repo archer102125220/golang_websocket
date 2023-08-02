@@ -124,7 +124,13 @@ func main() {
 
 		}
 	})
-	r.Run(":3000")
+	
+
+	err := r.RunTLS(":3000", "/etc/letsencrypt/live/dev-zack2.jiapin.online/cert.pem", "/etc/letsencrypt/live/dev-zack2.jiapin.online/privkey.pem")
+   	if err != nil {
+        	fmt.Println("Error starting server:", err)
+    	}
+
 }
 
 func (b *Broadcaster) Start() {
