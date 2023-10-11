@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+
+	_ "github.com/joho/godotenv/autoload"
 
 	"github.com/mitchellh/mapstructure"
 
@@ -127,7 +130,23 @@ func main() {
 		}
 	})
 
-	err := r.RunTLS(":3000", "/etc/letsencrypt/live/dev-zack2.jiapin.online/cert.pem", "/etc/letsencrypt/live/dev-zack2.jiapin.online/privkey.pem")
+	SERVER_PORT := os.Getenv("PORT")
+	CERT := os.Getenv("CERT_PATH")
+	SECRET_KEY := os.Getenv("PRIVE_KEY_PATH")
+	serverPort := ":3000"
+	if len(SERVER_PORT) != 0 {
+		serverPort = SERVER_PORT
+	}
+	cert := "/etc/letsencrypt/live/dev-zack2.jiapin.online/cert.pem"
+	if len(CERT) != 0 {
+		cert = CERT
+	}
+	secretKey := "/etc/letsencrypt/live/dev-zack2.jiapin.online/privkey.pem"
+	if len(SECRET_KEY) != 0 {
+		secretKey = SECRET_KEY
+	}
+
+	err := r.RunTLS(serverPort, cert, secretKey)
 	if err != nil {
 		fmt.Println("Error starting server:", err)
 	}
