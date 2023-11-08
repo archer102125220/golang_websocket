@@ -131,22 +131,23 @@ func main() {
 	})
 
 	SERVER_PORT := os.Getenv("PORT")
-	CERT := os.Getenv("CERT_PATH")
-	SECRET_KEY := os.Getenv("PRIVE_KEY_PATH")
+	// CERT := os.Getenv("CERT_PATH")
+	// SECRET_KEY := os.Getenv("PRIVE_KEY_PATH")
 	serverPort := ":3000"
 	if len(SERVER_PORT) != 0 {
 		serverPort = SERVER_PORT
 	}
-	cert := "/etc/letsencrypt/live/dev-zack2.jiapin.online/cert.pem"
-	if len(CERT) != 0 {
-		cert = CERT
-	}
-	secretKey := "/etc/letsencrypt/live/dev-zack2.jiapin.online/privkey.pem"
-	if len(SECRET_KEY) != 0 {
-		secretKey = SECRET_KEY
-	}
+	// cert := "/etc/letsencrypt/live/dev-zack2.jiapin.online/cert.pem"
+	// if len(CERT) != 0 {
+	// 	cert = CERT
+	// }
+	// secretKey := "/etc/letsencrypt/live/dev-zack2.jiapin.online/privkey.pem"
+	// if len(SECRET_KEY) != 0 {
+	// 	secretKey = SECRET_KEY
+	// }
 
-	err := r.RunTLS(serverPort, cert, secretKey)
+	// err := r.RunTLS(serverPort, cert, secretKey)
+	err := r.Run(serverPort)
 	if err != nil {
 		fmt.Println("Error starting server:", err)
 	}
