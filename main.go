@@ -7,12 +7,11 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/joho/godotenv/autoload"
-
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/joho/godotenv"
 )
 
 type Broadcaster struct {
@@ -75,6 +74,7 @@ type StampNotifySuccess struct {
 }
 
 func main() {
+
 	r := gin.Default()
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -130,26 +130,24 @@ func main() {
 		}
 	})
 
-	SERVER_PORT := os.Getenv("PORT")
-	// CERT := os.Getenv("CERT_PATH")
-	// SECRET_KEY := os.Getenv("PRIVE_KEY_PATH")
-	serverPort := ":3000"
-	if len(SERVER_PORT) != 0 {
-		serverPort = SERVER_PORT
+	err2 := godotenv.Load()
+	if err2 != nil {
+		log.Fatal("Error loading .env file")
 	}
-	// cert := "/etc/letsencrypt/live/dev-zack2.jiapin.online/cert.pem"
-	// if len(CERT) != 0 {
-	// 	cert = CERT
-	// }
-	// secretKey := "/etc/letsencrypt/live/dev-zack2.jiapin.online/privkey.pem"
-	// if len(SECRET_KEY) != 0 {
-	// 	secretKey = SECRET_KEY
-	// }
 
-	// err := r.RunTLS(serverPort, cert, secretKey)
-	err := r.Run(serverPort)
-	if err != nil {
-		fmt.Println("Error starting server:", err)
+	certPem := os.Getenv("DOMAIN_CERT_PEM")
+	privatePem := os.Getenv("DOMAIN_PRIVATE_PEM")
+	if os.Getenv("ENVIRONMENT") == "local" {
+		err := r.Run(":3000")
+		if err != nil {
+			fmt.Println("Error starting server:", err)
+		}
+	} else {
+		err := r.RunTLS(":3000", certPem, privatePem)
+		if err != nil {
+			fmt.Println("Error starting server:", err)
+		}
+
 	}
 
 }
