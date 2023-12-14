@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/mitchellh/mapstructure"
 
@@ -28,6 +29,7 @@ type Connector struct {
 
 type Server struct {
 	Connectors []*Connector
+	Mutex      sync.Mutex  // 新增鎖
 }
 
 type ReqBody struct {
@@ -99,6 +101,7 @@ func main() {
 		go func() {
 			<-c.Done()
 			fmt.Println("ws lost connection")
+			removeConnector(conn)  // 移除連線
 		}()
 		for {
 			_, data, err := ws.ReadMessage()
@@ -150,6 +153,18 @@ func main() {
 
 	}
 
+}
+
+// 新增函數來移除連線
+func removeConnector(conn *Connector) {
+    server.Mutex.Lock()
+    defer server.Mutex.Unlock()
+    for i, c := range server.Connectors {
+        if c == conn {
+            server.Connectors = append(server.Connectors[:i], server.Connectors[i+1:]...)
+            break
+        }
+    }
 }
 
 func (b *Broadcaster) Start() {
